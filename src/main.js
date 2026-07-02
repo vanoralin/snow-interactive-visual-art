@@ -168,12 +168,19 @@
 
   function spawnRow() {
     const spacing = 16;
-    const startY = -10 - Math.random() * 20;
+    const startY = reverseParticles ? (H + 10 + Math.random() * 20) : (-10 - Math.random() * 20);
     for (let x = Math.random() * spacing; x < W; x += spacing) {
       if (particles.length >= MAX_PARTICLES) break;
       if (Math.random() < 0.15) continue; // slight gaps so it doesn't look like a solid ruled line
       const jitterY = (Math.random() - 0.5) * 14;
-      spawnParticle(x + (Math.random() - 0.5) * 6, startY + jitterY, (Math.random() - 0.5) * 4, 130 + Math.random() * 40, 1.3 + Math.random() * 1.7);
+      const vy = reverseParticles ? (-250 - Math.random() * 150) : (130 + Math.random() * 40);
+      spawnParticle(
+        x + (Math.random() - 0.5) * 6,
+        startY + jitterY,
+        (Math.random() - 0.5) * 4,
+        vy,
+        1.3 + Math.random() * 1.7
+      );
     }
   }
 
@@ -190,6 +197,13 @@
   const GROUND_Y_FRAC = 0.94;
 
   function step(dt) {
+    // Update reverseProgress transitions
+    if (reverseParticles) {
+      reverseProgress = Math.min(1.0, reverseProgress + dt * 2.5);
+    } else {
+      reverseProgress = Math.max(0.0, reverseProgress - dt * 2.5);
+    }
+
     // smooth silhouette follow
     px += (tx - px) * Math.min(1, dt * 6);
     py += (ty - py) * Math.min(1, dt * 6);
@@ -200,8 +214,9 @@
     for (let k = particles.length - 1; k >= 0; k--) {
       const p = particles[k];
 
-      // normal particle physics
-      p.vy += GRAV * dt;
+      // normal particle physics (with reverse gravity transition)
+      const currentGrav = (1 - reverseProgress * 4.5) * GRAV; // gravity reverses and becomes upward force
+      p.vy += currentGrav * dt;
       p.x += p.vx * dt;
       p.vx *= (1 - 0.6 * dt);
       p.y += p.vy * dt;
@@ -211,19 +226,28 @@
         continue;
       }
 
-      const bY = bodySurfaceY(p.x);
-      if (bY != null) {
-        if (p.y >= bY - p.r) {
-          // Slide along surface instantly: redirect velocity down-slope
-          const slope = bodySlope(p.x);
-          let dir = slope >= 0 ? 1 : -1;
-          if (Math.abs(slope) < 0.08) {
-            dir = Math.random() < 0.5 ? 1 : -1;
+      // Check boundary deletion for rising particles
+      if (p.y < -30) {
+        particles.splice(k, 1);
+        continue;
+      }
+
+      // Body collisions: only apply when not fully reversed to let them fly up freely
+      if (reverseProgress < 0.5) {
+        const bY = bodySurfaceY(p.x);
+        if (bY != null) {
+          if (p.y >= bY - p.r) {
+            // Slide along surface instantly: redirect velocity down-slope
+            const slope = bodySlope(p.x);
+            let dir = slope >= 0 ? 1 : -1;
+            if (Math.abs(slope) < 0.08) {
+              dir = Math.random() < 0.5 ? 1 : -1;
+            }
+            p.vx = dir * (120 + Math.random() * 80); // slide velocity
+            p.vy = Math.max(p.vy * 0.4, 50); // slide downwards along the slope
+            p.y = bY - p.r - 1;
+            continue;
           }
-          p.vx = dir * (120 + Math.random() * 80); // slide velocity
-          p.vy = Math.max(p.vy * 0.4, 50); // slide downwards along the slope
-          p.y = bY - p.r - 1;
-          continue;
         }
       }
 
@@ -247,20 +271,26 @@
     const t = performance.now() * 0.004;
     fxctx.shadowColor = 'rgba(255,255,255,0.55)';
     fxctx.shadowBlur = 3;
+    // Draw as streaks or circles depending on reverseProgress
+    const streakLength = 0.05 * reverseProgress;
+    fxctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    fxctx.lineCap = 'round';
+    
     for (const p of particles) {
-      const s = 0.75 + 0.25 * Math.sin(t * 3 + p.tw);
-      let alpha = 0.65 * s + 0.3;
-      if (p.stuck) {
-        // smooth fade out during the last 0.5 seconds of its 1.5 seconds life
-        const remaining = 1.5 - p.life;
-        if (remaining < 0.5) {
-          alpha *= Math.max(0, remaining / 0.5);
-        }
+      if (reverseProgress > 0.02) {
+        fxctx.lineWidth = p.r * 2;
+        fxctx.beginPath();
+        fxctx.moveTo(p.x, p.y);
+        fxctx.lineTo(p.x - p.vx * streakLength, p.y - p.vy * streakLength);
+        fxctx.stroke();
+      } else {
+        const s = 0.75 + 0.25 * Math.sin(t * 3 + p.tw);
+        const alpha = 0.65 * s + 0.3;
+        fxctx.fillStyle = `rgba(255,255,255,${alpha})`;
+        fxctx.beginPath();
+        fxctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        fxctx.fill();
       }
-      fxctx.fillStyle = `rgba(255,255,255,${alpha})`;
-      fxctx.beginPath();
-      fxctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      fxctx.fill();
     }
     fxctx.shadowBlur = 0;
 
@@ -332,6 +362,8 @@
   let ws = null;
   let isWsConnected = false;
   let freezeParticles = false;
+  let reverseParticles = false;
+  let reverseProgress = 0;
   let detectedHands = [];
   let wsReadyToSend = true;
 
@@ -446,6 +478,15 @@
     // Set particle freeze status based on hand gestures
     freezeParticles = data.freeze_particles || false;
     detectedHands = data.hands || [];
+
+    const prevReverse = reverseParticles;
+    reverseParticles = data.reverse_particles || false;
+    if (reverseParticles && !prevReverse) {
+      // Shoot existing particles upwards!
+      for (const p of particles) {
+        p.vy = -180 - Math.random() * 220;
+      }
+    }
   }
 
   camBtn.addEventListener('click', async () => {
@@ -496,6 +537,8 @@
     }
     isWsConnected = false;
     freezeParticles = false;
+    reverseParticles = false;
+    reverseProgress = 0;
     detectedHands = [];
     wsReadyToSend = true;
 

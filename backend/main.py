@@ -67,6 +67,24 @@ def is_hand_fully_open(landmarks):
     
     return all([thumb_open, index_open, middle_open, ring_open, pinky_open])
 
+def is_index_pointing_up(landmarks):
+    # Calculate Euclidean distance
+    def dist(p1, p2):
+        return math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2)
+        
+    # Index finger is open (tip Y is above PIP Y)
+    index_open = landmarks[8].y < landmarks[6].y
+    
+    # Middle, Ring, Pinky are closed (tip Y is below PIP Y)
+    middle_closed = landmarks[12].y >= landmarks[10].y
+    ring_closed = landmarks[16].y >= landmarks[14].y
+    pinky_closed = landmarks[20].y >= landmarks[18].y
+    
+    # Thumb is closed (tip is close to pinky MCP)
+    thumb_closed = dist(landmarks[4], landmarks[17]) <= dist(landmarks[3], landmarks[17])
+    
+    return all([index_open, middle_closed, ring_closed, pinky_closed, thumb_closed])
+
 async def detect_body_edges(websocket):
     logging.info(f"Client connected: {websocket.remote_address}")
     try:
@@ -91,10 +109,13 @@ async def detect_body_edges(websocket):
             
             # Check if any hand has all 5 fingers open & serialize landmarks
             freeze_particles = False
+            reverse_particles = False
             hands_data = []
             for hand_landmarks in hand_results.hand_landmarks:
                 if is_hand_fully_open(hand_landmarks):
                     freeze_particles = True
+                if is_index_pointing_up(hand_landmarks):
+                    reverse_particles = True
                 
                 # Extract joint coordinates
                 landmarks_list = []
@@ -148,6 +169,7 @@ async def detect_body_edges(websocket):
                 "centroid_y": centroid_y,
                 "min_y": min_y,
                 "freeze_particles": freeze_particles,
+                "reverse_particles": reverse_particles,
                 "hands": hands_data
             }
             await websocket.send(json.dumps(response))
