@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ผงหิมะไหลลงตัว (AI Body Outline)</title>
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+  <div id="stage">
+    <div id="camwrap">
+      <video id="camvideo" autoplay playsinline muted></video>
+    </div>
+    <canvas id="bgcanvas"></canvas>
+    <canvas id="fxcanvas"></canvas>
+  </div>
+
+  <div id="ui">
+    <div id="title">
+      <b>✨ ผงหิมะตกสะสม (AI Detect)</b>
+      ขยับตัวให้หิมะเกาะหัว/ไหล่ หรือใช้เมาส์ลากสะสมผงหิมะ
+    </div>
+    <div id="controls">
+      <button id="camBtn">เปิดกล้อง AI</button>
+      <button id="burstBtn">โปรยผง ✦</button>
+    </div>
+  </div>
+
+  <div id="hint">ขยับเมาส์/ลากนิ้วบนจอ หรือเปิดกล้องให้ AI ตรวจจับตัวคนเพื่อให้หิมะเกาะสะสมบนตัว</div>
+  <div id="permMsg">ไม่สามารถเข้าถึงกล้องได้<br>หรือเซิร์ฟเวอร์ AI ออฟไลน์ อยู่ในโหมดจำลองด้วยเมาส์นะ</div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
