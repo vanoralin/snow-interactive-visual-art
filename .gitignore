@@ -25,6 +25,7 @@ dist-ssr
 
 # AI Models
 *.tflite
+*.task
 
 # Environment Variables
 .env

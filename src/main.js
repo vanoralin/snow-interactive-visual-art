@@ -263,6 +263,52 @@
       fxctx.fill();
     }
     fxctx.shadowBlur = 0;
+
+    // Draw hand skeleton if hands are detected
+    if (camOn && isWsConnected && detectedHands.length > 0) {
+      fxctx.save();
+      // Glow effect for skeleton lines
+      fxctx.shadowColor = 'rgba(201, 168, 255, 0.7)';
+      fxctx.shadowBlur = 6;
+      fxctx.strokeStyle = 'rgba(201, 168, 255, 0.8)'; // purple accent
+      fxctx.lineWidth = 3;
+      fxctx.lineCap = 'round';
+      
+      for (const hand of detectedHands) {
+        // Draw connection lines
+        for (const [startIdx, endIdx] of HAND_CONNECTIONS) {
+          const start = hand[startIdx];
+          const end = hand[endIdx];
+          if (start && end) {
+            const sx = (1 - start.x) * W;
+            const sy = start.y * H;
+            const ex = (1 - end.x) * W;
+            const ey = end.y * H;
+            
+            fxctx.beginPath();
+            fxctx.moveTo(sx, sy);
+            fxctx.lineTo(ex, ey);
+            fxctx.stroke();
+          }
+        }
+        
+        // Draw joint dots
+        fxctx.shadowBlur = 0; // disable shadow for dots
+        for (let idx = 0; idx < hand.length; idx++) {
+          const lm = hand[idx];
+          const sx = (1 - lm.x) * W;
+          const sy = lm.y * H;
+          
+          const isTip = [4, 8, 12, 16, 20].includes(idx);
+          fxctx.fillStyle = isTip ? '#ffd89c' : '#c9a8ff'; // gold for tips, purple for joints
+          
+          fxctx.beginPath();
+          fxctx.arc(sx, sy, isTip ? 5.5 : 4.5, 0, Math.PI * 2);
+          fxctx.fill();
+        }
+      }
+      fxctx.restore();
+    }
   }
 
   // ---------- input ----------
@@ -285,6 +331,18 @@
   let camOn = false;
   let ws = null;
   let isWsConnected = false;
+  let freezeParticles = false;
+  let detectedHands = [];
+  let wsReadyToSend = true;
+
+  const HAND_CONNECTIONS = [
+    [0, 1], [1, 2], [2, 3], [3, 4],
+    [0, 5], [5, 6], [6, 7], [7, 8],
+    [9, 10], [10, 11], [11, 12],
+    [13, 14], [14, 15], [15, 16],
+    [0, 17], [17, 18], [18, 19], [19, 20],
+    [5, 9], [9, 13], [13, 17]
+  ];
 
   // Hidden canvas for sending scaled/compressed camera frames
   const sendCanvas = document.createElement('canvas');
@@ -293,7 +351,7 @@
   const sendCtx = sendCanvas.getContext('2d');
 
   let lastFrameSentTime = 0;
-  const FRAME_SEND_INTERVAL = 60; // ms (~16 fps) to throttle frame uploads and prevent lag
+  const FRAME_SEND_INTERVAL = 20; // ms to throttle frame uploads (up to 50 fps)
 
   function initWebSocket() {
     if (ws) {
@@ -308,30 +366,35 @@
     ws.onopen = () => {
       console.log('Connected to Python AI Edge Detection server.');
       isWsConnected = true;
+      wsReadyToSend = true;
       permMsg.style.display = 'none';
     };
-
+ 
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
         handleDetectionData(data);
       } catch (err) {
         console.error('Error parsing WS message:', err);
+      } finally {
+        wsReadyToSend = true; // Acknowledge and allow sending next frame
       }
     };
-
+ 
     ws.onclose = () => {
       console.log('Disconnected from Python AI server. Reconnecting in 3s...');
       isWsConnected = false;
+      wsReadyToSend = true;
       // Retrying...
       if (camOn) {
         setTimeout(initWebSocket, 3000);
       }
     };
-
+ 
     ws.onerror = (err) => {
       console.warn('WebSocket error. Ensure Python backend is running.');
       isWsConnected = false;
+      wsReadyToSend = true;
     };
   }
 
@@ -379,6 +442,10 @@
       tx = mirroredNormCentroidX * W;
       ty = (data.min_y / vH) * H + headR * 0.55;
     }
+
+    // Set particle freeze status based on hand gestures
+    freezeParticles = data.freeze_particles || false;
+    detectedHands = data.hands || [];
   }
 
   camBtn.addEventListener('click', async () => {
@@ -428,6 +495,9 @@
       ws = null;
     }
     isWsConnected = false;
+    freezeParticles = false;
+    detectedHands = [];
+    wsReadyToSend = true;
 
     if (camSurfaceExists) camSurfaceExists.fill(0);
     if (camSurfaceY) camSurfaceY.fill(9999);
@@ -435,18 +505,23 @@
 
   function sendFrameIfNeeded(now) {
     if (!camOn || !isWsConnected || !video.srcObject) return;
+    if (!wsReadyToSend) return; // Prevent queue buildup by waiting for acknowledgment
     if (now - lastFrameSentTime < FRAME_SEND_INTERVAL) return;
+
+    wsReadyToSend = false;
     lastFrameSentTime = now;
 
     // Draw current video frame to hidden canvas
     sendCtx.drawImage(video, 0, 0, sendCanvas.width, sendCanvas.height);
 
-    // Convert to jpeg blob and transmit over WS
+    // Convert to jpeg blob and transmit over WS (lower quality slightly for faster transfer)
     sendCanvas.toBlob((blob) => {
       if (blob && ws && ws.readyState === WebSocket.OPEN) {
         ws.send(blob);
+      } else {
+        wsReadyToSend = true; // Release if connection failed
       }
-    }, 'image/jpeg', 0.55);
+    }, 'image/jpeg', 0.40);
   }
 
   burstBtn.addEventListener('click', burst);
@@ -470,8 +545,10 @@
       sendFrameIfNeeded(now);
     }
 
-    ambientSpawn(dt);
-    step(dt);
+    if (!freezeParticles) {
+      ambientSpawn(dt);
+      step(dt);
+    }
     drawScene();
     render();
     requestAnimationFrame(loop);
