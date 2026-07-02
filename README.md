@@ -1,103 +1,103 @@
 # ❄️ Snowfall Body Outline Interactive Art
 
-โปรเจกต์งานศิลปะเชิงปฏิสัมพันธ์แบบเรียลไทม์ (Interactive Visual Art) ที่ผสมผสานเว็บแอปพลิเคชันและปัญญาประดิษฐ์ (AI) เพื่อตรวจจับโครงร่างร่างกายของผู้ใช้งานและพิกัดนิ้วมือผ่านกล้องเว็บแคม จากนั้นจำลองทิศทางการตกของหิมะให้ไหลสไลด์ไปตามศีรษะและบ่าของคุณ หรือโต้ตอบกับท่าทางของมือได้อย่างสนุกสนานเรียลไทม์
+An interactive, real-time visual art project that combines a web application with Artificial Intelligence (AI) to detect the user's body silhouette and hand gestures via webcam. Falling snow particles land on your head and shoulders, slide down naturally, or respond dynamically to your hand gestures in real-time.
 
 ---
 
-## ✨ คุณสมบัติเด่น (Features)
-- **AI Body Segmentation & Hand Tracking**: ใช้โมเดล **MediaPipe Selfie Segmentation** และ **Hand Landmarker** รันควบคู่กันบน Python หลังบ้านเพื่อตัดขอบเขตตัวคนและวิเคราะห์ตำแหน่งข้อนิ้วมือ
-- **Interactive Gestures Control (การควบคุมด้วยท่าทางมือ)**:
-  - **แบมือ/กางนิ้วมือ 5 นิ้ว**: สั่ง **"หยุดเวลาหิมะ" (Freeze Effect)** แช่แข็งทุกเม็ดหิมะให้หยุดนิ่งค้างกลางอากาศ
-  - **กำมือชี้เฉพาะนิ้วชี้ขึ้น**: สั่ง **"ย้อนแรงโน้มถ่วง" (Gravity Reverse)** หิมะจะลอยพ่นย้อนกลับขึ้นฟ้า และค่อย ๆ ยืดตัวเปลี่ยนรูปร่างจากจุดกลมกลายเป็นเส้นสายฝนพุ่งยาว (Warp Streaks) ตามระดับความเร็ว
-- **Hand Tracking Toggle**: ปุ่มสลับ เปิด/ปิด ระบบการประมวลผลท่าทางมือบนหน้าจอ เพื่อเข้าสู่โหมดการแสดงวิชวลหิมะตกธรรมดาได้ตลอดเวลา
-- **Premium Glassmorphism Tooltips**: คำอธิบายการใช้งานปุ่มสลับการควบคุมแบบกระจกฝ้าหรูหรา แสดงผลด้วยแอนิเมชันย่อขยายแบบสมูทเมื่อเลื่อนเมาส์ชี้
-- **Clean Camera View & Background**: แสดงภาพจากเว็บแคมด้วยแสงและสีจริงตามธรรมชาติ 100% พร้อมลบเส้นสายไฟประดับด้านหลังออกเพื่อให้ฉากหลังสะอาดตาและมีมิติที่ชัดเจนที่สุด
-- **Real-Time Latency Optimizations (การตอบสนองความเร็วสูง)**:
-  - **ลูปส่งภาพแบบรอการตอบกลับ (Send-on-Acknowledgment)**: หน้าเว็บจะส่งเฟรมถัดไปเมื่อได้รับผลลัพธ์ของเฟรมก่อนหน้ากลับมาแล้วเท่านั้น ป้องกันการสะสมค้างในคิว (Queue buildup) ส่งผลให้ประมวลผลเฟรมที่สดใหม่ที่สุดเสมอ
-  - **การประมวลผลแบบขนาน (Non-blocking IO)**: รันโมเดล AI ใน Thread แยกต่างหากด้วย `asyncio.to_thread` ของ Python เพื่อไม่ให้การคำนวณเบียดบังงานส่งรับข้อมูลเว็บซ็อกเก็ต
-  - **คำนวณเวกเตอร์ด้วย NumPy (Sub-millisecond speed)**: ค้นหาพิกัดขอบร่างกายด้วยฟังก์ชันประมวลผลอาเรย์แบบรวดเร็ว (`np.argmax`, `np.convolve`) แทนการใช้ Python Loop แบบเดิม ลดดีเลย์เหลือไม่ถึง 1 มิลลิวินาที
+## ✨ Features
+- **AI Body Segmentation & Hand Tracking**: Runs the **MediaPipe Selfie Segmentation** and **Hand Landmarker** models concurrently on a Python backend to extract body outlines and analyze finger joint positions.
+- **Interactive Gestures Control**:
+  - **Open Hand (5-Finger Spread)**: Triggers the **"Freeze Effect"**, locking all active snow particles in mid-air (pausing gravity).
+  - **Pointing Index Finger Up**: Triggers **"Gravity Reverse"**, making the snow particles float rapidly upwards back into the sky, smoothly morphing from round circles into warp streaks (motion blur lines) based on their velocity.
+- **Hand Tracking Toggle**: A dedicated UI button to quickly toggle hand tracking/gestures on or off, falling back to a normal snowfall visualizer.
+- **Premium Glassmorphism Tooltips**: Sleek, frosted-glass tooltips that smoothly scale and fade in on hover, explaining the exact gesture controls.
+- **Clean Camera View & Background**: Displays the camera feed with original, natural webcam colors (100% opacity) and removes decorative background distractions (fairy lights) for a modern, minimalist aesthetic.
+- **Real-Time Latency Optimizations**:
+  - **Send-on-Acknowledgment Loop**: The browser only sends a frame once the response from the previous frame is processed, guaranteeing zero queue buildup and the lowest possible latency.
+  - **Non-blocking IO (Parallel Threads)**: Runs CPU-bound MediaPipe inference on separate threads via `asyncio.to_thread` to keep the WebSocket server responsive.
+  - **Vectorized NumPy Outline Search**: Vectorized search algorithms (`np.argmax`, `np.convolve`) locate body edges and apply 1D smoothing in sub-milliseconds, replacing slow Python iteration loops.
 
 ---
 
-## 🏗️ โครงสร้างของระบบ (Architecture)
+## 🏗️ Architecture
 
 ```
 [ Web Browser (Frontend) ]
       │
-      │ 1. ส่งเฟรมกล้องขนาด 320x240 (JPEG Binary Blob) ทีละเฟรม (รอผลตอบกลับก่อนส่งเฟรมถัดไป)
+      │ 1. Sends 320x240 camera frames (JPEG Binary Blob) one frame at a time (wait-for-ack)
       ▼
-[ Python Server (Backend: ws://localhost:8765) ] ──► รันคู่วิเคราะห์ AI (Selfie Seg. & Hand Landmarker)
+[ Python Server (Backend: ws://localhost:8765) ] ──► MediaPipe AI processing (Seg. & Hands)
       │
-      │ 2. ส่งพิกัดขอบร่าง, ข้อมูลมือ และสถานะสั่ง Freeze/Reverse หิมะ (JSON) กลับมา
+      │ 2. Sends body edges, hand joints, and gesture state flags (JSON) back
       ▼
-[ HTML5 Canvas (Render) ] ──► วาดหิมะตก/สไลด์ลู่ตามตัวคน หรือแปลงรูปยืดหิมะพุ่งย้อนขึ้นฟ้า
+[ HTML5 Canvas (Render) ] ──► Simulates snow sliding or morphs particles to fly upwards
 ```
 
 ---
 
-## 🛠️ เทคโนโลยีที่ใช้ (Tech Stack)
+## 🛠️ Tech Stack
 
-### ฝั่งผู้ใช้งาน (Frontend)
-- **Vite** (เครื่องมือจัดเตรียมพัฒนาเว็บความเร็วสูง)
-- **pnpm** (เครื่องมือจัดการแพ็กเกจ Node.js ประสิทธิภาพสูง)
-- **HTML5 Canvas API** (วาดเม็ดหิมะ เส้นโครงมือ และคำนวณลอจิกฟิสิกส์ฝั่งหน้าจอ)
+### Client Side (Frontend)
+- **Vite** (Next-generation frontend tooling)
+- **pnpm** (Fast, disk space efficient package manager)
+- **HTML5 Canvas API** (Draws snow particles, hand skeletons, and handles physics calculations)
 
-### ฝั่งเซิร์ฟเวอร์ AI (Backend)
+### AI Server Side (Backend)
 - **Python 3.10+**
-- **MediaPipe Tasks API** (ตรวจจับภาพขอบร่างผู้ใช้และข้อต่อนิ้วมือ)
-- **OpenCV & NumPy** (จัดสรรมิติข้อมูลรูปภาพและกรองพิกัดด้วยความเร็วสูง)
-- **Websockets** (การรับส่งข้อมูลทิศทางสองทางที่มีความหน่วงต่ำมาก)
+- **MediaPipe Tasks API** (Core AI engines for segmentation and hand landmarks)
+- **OpenCV & NumPy** (High-speed image decoding and vectorized edge processing)
+- **Websockets** (Low-latency bidirectional data communication)
 
 ---
 
-## 🚀 วิธีการติดตั้งและเริ่มใช้งาน (Setup & Installation)
+## 🚀 Setup & Installation
 
-### 1. การตั้งค่าฝั่งเซิร์ฟเวอร์ AI (Python Backend)
+### 1. Python AI Backend Setup
 
-1. เข้าไปที่โฟลเดอร์ของเซิร์ฟเวอร์:
+1. Navigate to the backend directory:
    ```bash
    cd backend
    ```
-2. ติดตั้งไลบรารีที่จำเป็นผ่าน pip:
+2. Install the required Python packages:
    ```bash
    pip install -r requirements.txt
    ```
-3. สตาร์ทเซิร์ฟเวอร์หลังบ้าน:
+3. Start the WebSocket server:
    ```bash
    python main.py
    ```
-   *(เมื่อเปิดรันครั้งแรก ระบบจะดาวน์โหลดไฟล์โมเดล AI `selfie_segmenter.tflite` และ `hand_landmarker.task` จาก Google CDN มาเก็บไว้ในเครื่องโดยอัตโนมัติ และจะขึ้นข้อความ `WebSocket AI detection server started on ws://localhost:8765`)*
+   *(On its first run, the script will automatically download the `selfie_segmenter.tflite` and `hand_landmarker.task` models from Google's public CDN. The server will print `WebSocket AI detection server started on ws://localhost:8765` when ready).*
 
 ---
 
-### 2. การตั้งค่าฝั่งหน้าเว็บ (Node.js Frontend)
+### 2. Vite Frontend Setup
 
-1. เปิด Terminal ใหม่ในโฟลเดอร์หลักของโปรเจกต์
-2. ติดตั้ง Dependencies ด้วย pnpm:
+1. Open a new terminal in the project's root folder.
+2. Install the web dependencies:
    ```bash
    pnpm install
    ```
-3. รันเซิร์ฟเวอร์จำลองการพัฒนา:
+3. Start the development server:
    ```bash
    pnpm run dev
    ```
-4. เปิดเบราว์เซอร์ไปที่ลิงก์ที่แสดงบนหน้าจอ (ปกติคือ [http://localhost:5173/](http://localhost:5173/))
-5. กดปุ่มไอคอนกล้องถ่ายรูปบนหน้าจอเพื่อเปิดกล้อง AI และกางนิ้วมือ/ชูนิ้วชี้เพื่อควบคุมทิศทางหิมะได้เลย!
+4. Open your browser and navigate to the displayed URL (usually [http://localhost:5173/](http://localhost:5173/)).
+5. Click the circular camera icon button to activate the AI webcam tracking and have fun!
 
 ---
 
-## 📂 โครงสร้างโฟลเดอร์ในโปรเจกต์ (Folder Structure)
+## 📂 Folder Structure
 
 ```
 snow/
 ├── backend/
-│   ├── main.py                 # WebSocket Server รันประมวลผล AI และวิเคราะห์นิ้วมือ
-│   └── requirements.txt        # รายการแพ็กเกจฝั่ง Python
+│   ├── main.py                 # WebSocket server handles AI model inferences
+│   └── requirements.txt        # Python package dependencies
 ├── src/
-│   ├── main.js                 # โค้ดวิชวลหลัก วาดหิมะ, เส้นกระดูกนิ้วมือ และส่งเฟรมภาพผ่าน WS
-│   └── style.css               # สไตล์สีสันหน้าจอ ปุ่มทรงกลม และระบบ Hover Tooltips
-├── index.html                  # ไฟล์เทมเพลตหน้าเว็บและปุ่มควบคุมไอคอน SVG
-├── package.json                # สคริปต์ควบคุมและ Vite Config
-├── .gitignore                  # ตัวกำหนดละเว้นไฟล์ของ Git (โมเดล .tflite และ .task จะถูกละเว้น)
-└── README.md                   # เอกสารประกอบการใช้งานฉบับนี้ (ปรับปรุงล่าสุด)
+│   ├── main.js                 # Snow simulation logic, WS communication & skeleton rendering
+│   └── style.css               # Premium styles, circular buttons & glassmorphism tooltips
+├── index.html                  # HTML template with SVG icon buttons
+├── package.json                # Project configurations & dependencies
+├── .gitignore                  # Git ignore rules (binaries .tflite & .task are ignored)
+└── README.md                   # Project documentation (English version)
 ```
