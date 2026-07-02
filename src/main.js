@@ -5,7 +5,7 @@
   const fxctx = fx.getContext('2d');
   const video = document.getElementById('camvideo');
   const camBtn = document.getElementById('camBtn');
-  const burstBtn = document.getElementById('burstBtn');
+  const handBtn = document.getElementById('handBtn');
   const hint = document.getElementById('hint');
   const permMsg = document.getElementById('permMsg');
 
@@ -52,27 +52,6 @@
       bgctx.fillRect(0, 0, W, H);
     }
 
-    // fairy light string across top
-    bgctx.save();
-    bgctx.strokeStyle = 'rgba(255,255,255,0.15)';
-    bgctx.lineWidth = 1.2;
-    bgctx.beginPath();
-    const swag = 40;
-    bgctx.moveTo(0, H * 0.10);
-    for (let x = 0; x <= W; x += 40) {
-      const y = H * 0.10 + Math.sin(x / 90) * 6 + swag * Math.sin((x / W) * Math.PI);
-      bgctx.lineTo(x, y);
-    }
-    bgctx.stroke();
-    for (let x = 10; x < W; x += 26) {
-      const y = H * 0.10 + Math.sin(x / 90) * 6 + swag * Math.sin((x / W) * Math.PI) + 3;
-      const tw = 0.35 + 0.65 * Math.abs(Math.sin(x * 0.13 + performance.now() * 0.0012));
-      bgctx.fillStyle = `rgba(255,216,156,${0.25 + tw * 0.55})`;
-      bgctx.beginPath();
-      bgctx.arc(x, y, 2.1, 0, Math.PI * 2);
-      bgctx.fill();
-    }
-    bgctx.restore();
   }
 
   // ---------- body silhouette (target for cam OR pointer) ----------
@@ -181,13 +160,6 @@
         vy,
         1.3 + Math.random() * 1.7
       );
-    }
-  }
-
-  function burst() {
-    for (let i = 0; i < 70 && particles.length < MAX_PARTICLES; i++) {
-      const x = px + (Math.random() - 0.5) * shW * 1.3;
-      spawnParticle(x, -10 - Math.random() * 30, (Math.random() - 0.5) * 30, 40 + Math.random() * 40, 1.2 + Math.random() * 2.2);
     }
   }
 
@@ -358,6 +330,9 @@
   let idleT = 0;
 
   // ---------- WebSocket and Video Setup ----------
+  const CAMERA_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>`;
+  const CAMERA_OFF_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M21 21H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3m3-3h6l2 3h4a2 2 0 0 1 2 2v9.34"></path><path d="M14.17 14.17a4 4 0 0 1-5.66-5.66"></path></svg>`;
+
   let camOn = false;
   let ws = null;
   let isWsConnected = false;
@@ -366,6 +341,7 @@
   let reverseProgress = 0;
   let detectedHands = [];
   let wsReadyToSend = true;
+  let enableHandTracking = true;
 
   const HAND_CONNECTIONS = [
     [0, 1], [1, 2], [2, 3], [3, 4],
@@ -476,18 +452,36 @@
     }
 
     // Set particle freeze status based on hand gestures
-    freezeParticles = data.freeze_particles || false;
-    detectedHands = data.hands || [];
+    if (enableHandTracking) {
+      freezeParticles = data.freeze_particles || false;
+      detectedHands = data.hands || [];
 
-    const prevReverse = reverseParticles;
-    reverseParticles = data.reverse_particles || false;
-    if (reverseParticles && !prevReverse) {
-      // Shoot existing particles upwards!
-      for (const p of particles) {
-        p.vy = -180 - Math.random() * 220;
+      const prevReverse = reverseParticles;
+      reverseParticles = data.reverse_particles || false;
+      if (reverseParticles && !prevReverse) {
+        // Shoot existing particles upwards!
+        for (const p of particles) {
+          p.vy = -180 - Math.random() * 220;
+        }
       }
+    } else {
+      freezeParticles = false;
+      reverseParticles = false;
+      detectedHands = [];
     }
   }
+
+  handBtn.addEventListener('click', () => {
+    enableHandTracking = !enableHandTracking;
+    if (enableHandTracking) {
+      handBtn.classList.add('active');
+    } else {
+      handBtn.classList.remove('active');
+      freezeParticles = false;
+      reverseParticles = false;
+      detectedHands = [];
+    }
+  });
 
   camBtn.addEventListener('click', async () => {
     if (camOn) {
@@ -503,7 +497,7 @@
       await video.play();
       video.classList.add('on');
       camOn = true;
-      camBtn.textContent = 'ปิดกล้อง AI';
+      camBtn.innerHTML = CAMERA_OFF_ICON;
       camBtn.classList.add('active');
 
       // Initialize WebSocket connection to AI Backend
@@ -526,7 +520,7 @@
     video.srcObject = null;
     video.classList.remove('on');
     camOn = false;
-    camBtn.textContent = 'เปิดกล้อง AI';
+    camBtn.innerHTML = CAMERA_ICON;
     camBtn.classList.remove('active');
 
     if (ws) {
@@ -566,8 +560,6 @@
       }
     }, 'image/jpeg', 0.40);
   }
-
-  burstBtn.addEventListener('click', burst);
 
   // ---------- main loop ----------
   let last = performance.now();

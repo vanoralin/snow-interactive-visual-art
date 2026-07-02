@@ -111,6 +111,49 @@ button.active {
   border-color: var(--accent);
 }
 
+#camBtn, #handBtn {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+#controls button {
+  position: relative;
+}
+
+#controls button::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 100%;
+  left: 0;
+  transform: translate(0, 8px) scale(0.9);
+  background: rgba(15, 12, 28, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.95);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+}
+
+#controls button:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(0, 8px) scale(1);
+}
+
 #hint {
   position: fixed;
   bottom: 22px;
